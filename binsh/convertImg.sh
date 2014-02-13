@@ -18,12 +18,16 @@
 usage()
 {
 cat << EOF
-Uasge: $0 -s SIZE [-o OUTPUT_DIR] FILE...
+Uasge: $0 [-s SIZE] [-r ROTATION] [-o OUTPUT_DIR] [-f OUTPUT_FORMAT] FILE...
 Resize the given image files.
 EOF
 }
 
-while getopts "s:o:r:" ARGNAME; do
+outputDir=""
+outputFormat=""
+processOpts=""
+
+while getopts "f:s:o:r:" ARGNAME; do
     case ${ARGNAME} in
         r)
             processOpts="${processOpts} -rotate ${OPTARG}"
@@ -34,27 +38,27 @@ while getopts "s:o:r:" ARGNAME; do
         o)
             outputDir=${OPTARG}
             ;;
+        f)
+            outputFormat=${OPTARG}
+            ;;
         ?)
             usage
             exit 1
     esac
 done
 
-if [[ -z "${processOpts}" ]]
-then
+if [ "x${processOpts}" == "x" ]; then
     usage
     exit 1
 fi
 
-if [ $# -lt ${OPTIND} ]
-then
+if [ $# -lt ${OPTIND} ]; then
     # No filename pattern given
     usage
     exit 1
 fi
 
-if [[ -z ${outputDir} ]]
-then
+if [ "x${outputDir}" == "x" ]; then
     outputDir='out'
 fi
 
@@ -62,9 +66,18 @@ mkdir -p ${outputDir}
 
 while [ ${OPTIND} -le $# ]; do
     filename=${@:${OPTIND}:1}
+
+    if [ "x${outputFormat}" ==  "x" ]; then
+        outFilename=${filename}
+    else
+        outFilename=${filename%.*}.${outputFormat}
+    fi
     
     echo "Processing \"${filename}\""
-    convert "${filename}" ${processOpts} "${outputDir}/${filename}"
+    convert "${filename}" ${processOpts} "${outputDir}/${outFilename}"
+    if [ $? != 0 ]; then
+        exit 1
+    fi
 
     OPTIND=${OPTIND}+1
 done
