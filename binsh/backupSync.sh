@@ -97,11 +97,16 @@ fi
 # Prevent executing concurrent backups
 SYNC_LOCK=${SYNC_LIST}.lock
 if [ -e ${SYNC_LOCK} ]; then
-    echo "Error: Lock file already exists: ${SYNC_LOCK}."
-    exit 1
+    ps -p `cat ${SYNC_LOCK}` > /dev/null
+    if [ $? -eq 0 ]; then
+        # Process is still running
+        # Obviously it may not be the same process if we are not lucky...
+        # TODO we should also check the process command name is equal to this script file name
+        exit 0
+    fi
 fi
 
-touch ${SYNC_LOCK}
+echo $$ > ${SYNC_LOCK}
 
 # Rebuild ssh-agent variables (needed for cron)
 export SSH_AGENT_PID=`ps ax | grep ssh-agent | grep -v grep | awk '{printf $1}'`
