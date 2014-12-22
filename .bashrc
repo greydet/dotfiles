@@ -50,7 +50,13 @@ if [ -n "$force_color_prompt" ]; then
 fi
 
 if [ "$color_prompt" = yes ]; then
-    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+    if [ "$USER" = root ]; then
+        user_color_code=31 # Red
+    else
+        user_color_code=32 # Green
+    fi
+
+    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;${user_color_code}m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
 else
     PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
 fi
