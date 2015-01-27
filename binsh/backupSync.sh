@@ -37,29 +37,38 @@ SERVER_USER=""
 SERVER_PORT=""
 LOCAL_TO_DIST=1
 NO_CHANGE=0
+BACKUP_ROOT=""
+ROTATION_ROOT=""
 
 buildServerAccess()
 {
+    SERVER_PATH=""
+
+    # Are we constructing server access with remote path as first optional argument?
+    if [ "x$1" != "x" ]; then
+        SERVER_PATH=$1
+        if [[ $SERVER_PATH != /* && "x${BACKUP_ROOT}" != "x" ]]; then
+            # If the remote path is relative, prefix it with the backup root
+            SERVER_PATH=${BACKUP_ROOT}/${SERVER_PATH}
+        fi
+    fi
+
     if [ "x${SERVER_ADDRESS}" != "x" ]; then
-        if [ "x$1" != "x" ]; then
-            SERVER_PATH="${SERVER_ADDRESS}:$1"
+        if [ "x${SERVER_PATH}" != "x" ]; then
+            SERVER_PATH="${SERVER_ADDRESS}:${SERVER_PATH}"
         else
             SERVER_PATH="${SERVER_ADDRESS}"
         fi
         if [ "x${SERVER_USER}" != "x" ]; then
             SERVER_PATH="${SERVER_USER}@${SERVER_PATH}"
         fi
-    elif [ "x$1" != "x" ]; then
-        SERVER_PATH=$1
-    else
-        SERVER_PATH=""
     fi
 
     echo ${SERVER_PATH}
 }
 
 # Parse arguments
-while getopts "hina:p:u:f:" ARGNAME; do
+while getopts "hina:b:p:r:u:f:" ARGNAME; do
     case ${ARGNAME} in
         a)
             SERVER_ADDRESS=${OPTARG}
@@ -72,6 +81,12 @@ while getopts "hina:p:u:f:" ARGNAME; do
             ;;
         f)
             SYNC_LIST=${OPTARG}
+            ;;
+        b)
+            BACKUP_ROOT=${OPTARG}
+            ;;
+        r)
+            ROTATION_ROOT=${OPTARG}
             ;;
         i)
             LOCAL_TO_DIST=0
@@ -121,8 +136,6 @@ fi
 RET_CODE=0
 FROM_LIST=()
 TO_LIST=()
-BACKUP_ROOT=""
-ROTATION_ROOT=""
 
 # Read ${SYNC_LIST} line by line
 while read -r SYNC_ENTRY; do
@@ -135,26 +148,8 @@ while read -r SYNC_ENTRY; do
         # Comment line
         continue
     fi
-
-    if [[ "${SYNC_ENTRY}" == *=* ]]; then
-        # Property
-        VAR_NAME=`echo ${SYNC_ENTRY} | sed 's/\(.*\)=.*/\1/g'`
-        VAR_VALUE=`echo ${SYNC_ENTRY} | sed 's/.*=\(.*\)/\1/g'`
-
-        case $VAR_NAME in
-            *BACKUP_ROOT*)
-                BACKUP_ROOT=${VAR_VALUE}
-            ;;
-            *ROTATION_ROOT*)
-                ROTATION_ROOT=${VAR_VALUE}
-            ;;
-            *)
-                echo "Error: Invalid property: ${SYNC_ENTRY}"
-                RET_CODE=1
-                break
-            ;;
-        esac
-    elif [[ "${SYNC_ENTRY}" == *:* ]]; then
+    
+    if [[ "${SYNC_ENTRY}" == *:* ]]; then
         # Backup mapping entry
         FROM_PATH=`echo ${SYNC_ENTRY} | sed 's/\(.*\):.*/\1/g'`
         TO_PATH=`echo ${SYNC_ENTRY} | sed 's/.*:\(.*\)/\1/g'`
@@ -195,12 +190,10 @@ while [ $i -lt ${#FROM_LIST[@]} ]; do
     FROM_PATH=${FROM_LIST[$i]}
     TO_PATH=${TO_LIST[$i]}
 
-    if [ "x${SERVER_ADDRESS}" != "x" ]; then
-        if [ ${LOCAL_TO_DIST} -eq 1 ]; then
-            TO_PATH=`buildServerAccess ${TO_PATH}`
-        else
-            FROM_PATH=`buildServerAccess ${FROM_PATH}`
-        fi
+    if [ ${LOCAL_TO_DIST} -eq 1 ]; then
+        TO_PATH=`buildServerAccess ${TO_PATH}`
+    else
+        FROM_PATH=`buildServerAccess ${FROM_PATH}`
     fi
     echo "Backing up from '${FROM_PATH}' to '${TO_PATH}'"
 
@@ -213,7 +206,7 @@ while [ $i -lt ${#FROM_LIST[@]} ]; do
     let i+=1
 done
 
-# Backup rotation only in local to distant direction and if variable were set in sync file
+# Backup rotation only in local to distant direction and if rotation root is given
 if [ "x${BACKUP_ROOT}" != "x" -a "x${ROTATION_ROOT}" != "x" -a ${LOCAL_TO_DIST} -eq 1 ]; then
     ROTATION_SCRIPT="${SCRIPT_PATH}/${ROTATION_SCRIPT_NAME}"
     if [ -r ${ROTATION_SCRIPT} ]; then
