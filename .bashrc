@@ -109,4 +109,6 @@ if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
     . /etc/bash_completion
 fi
 
-export PATH=/opt/microchip/mplabc30/v3.30b/bin:$PATH
+if [ -f ~/.bashrc_local ]; then
+    . ~/.bashrc_local
+fi
