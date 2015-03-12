@@ -64,8 +64,12 @@ fi
 
 mkdir -p ${outputDir}
 
-while [ ${OPTIND} -le $# ]; do
-    filename=${@:${OPTIND}:1}
+doit()
+{
+    processOpts=$1
+    outputFormat=$2
+    outputDir=$3
+    filename=$4
 
     if [ "x${outputFormat}" ==  "x" ]; then
         outFilename=`basename ${filename}`
@@ -78,7 +82,20 @@ while [ ${OPTIND} -le $# ]; do
     if [ $? != 0 ]; then
         exit 1
     fi
+}
+export -f doit
 
-    OPTIND=${OPTIND}+1
-done
+if parallel1 -V > /dev/null 2>&1; then
+    # Doit in parallel
+    parallel "doit \"${processOpts}\" \"${outputFormat}\" \"${outputDir}\"" ::: ${@:${OPTIND}}
+else
+    echo "parallel program not found. Conversion will be performed without parallelization."
+    while [ ${OPTIND} -le $# ]; do
+        filename=${@:${OPTIND}:1}
+
+        doit "${processOpts}" "${outputFormat}" "${outputDir}" $filename
+
+        OPTIND=${OPTIND}+1
+    done
+fi
 
