@@ -47,7 +47,7 @@ while getopts "f:s:o:r:" ARGNAME; do
     esac
 done
 
-if [ "x${processOpts}" == "x" ]; then
+if [ "x${processOpts}" == "x" -a "x${outputFormat}" == "x" ]; then
     usage
     exit 1
 fi
