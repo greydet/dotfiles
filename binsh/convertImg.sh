@@ -68,9 +68,9 @@ while [ ${OPTIND} -le $# ]; do
     filename=${@:${OPTIND}:1}
 
     if [ "x${outputFormat}" ==  "x" ]; then
-        outFilename=${filename}
+        outFilename=`basename ${filename}`
     else
-        outFilename=${filename%.*}.${outputFormat}
+        outFilename=`basename ${filename%.*}.${outputFormat}`
     fi
     
     echo "Processing \"${filename}\""
