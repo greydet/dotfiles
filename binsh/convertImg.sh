@@ -85,7 +85,7 @@ doit()
 }
 export -f doit
 
-if parallel1 -V > /dev/null 2>&1; then
+if parallel -V > /dev/null 2>&1; then
     # Doit in parallel
     parallel "doit \"${processOpts}\" \"${outputFormat}\" \"${outputDir}\"" ::: ${@:${OPTIND}}
 else
